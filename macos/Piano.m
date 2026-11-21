@@ -212,23 +212,23 @@ static NSString *parameterValue(int i,double value){double span=parameters[i].ma
 }
 - (void)keyUp:(NSEvent*)event{NSString *key=event.charactersIgnoringModifiers.lowercaseString;if([key isEqualToString:@" "])spaceHeld=NO;if([key isEqualToString:@"c"])cHeld=NO;[self syncGate];}
 - (BOOL)selfTest{
- BOOL pass=YES;Settings initial=settings;
+ BOOL pass=YES;int drags=0;Settings initial=settings;
  for(int i=0;i<PARAM_COUNT;i++){NSPoint point=knobPoint(i);CGFloat scale=[self canvasScale];NSPoint local=NSMakePoint(point.x*scale,point.y*scale);NSPoint screen=[self convertPoint:local toView:nil];
   NSEvent *down=[NSEvent mouseEventWithType:NSEventTypeLeftMouseDown location:screen modifierFlags:0 timestamp:0 windowNumber:self.window.windowNumber context:nil eventNumber:1 clickCount:1 pressure:1];[self mouseDown:down];
   screen.y+=9*scale;
   NSEvent *drag=[NSEvent mouseEventWithType:NSEventTypeLeftMouseDragged location:screen modifierFlags:0 timestamp:0 windowNumber:self.window.windowNumber context:nil eventNumber:2 clickCount:1 pressure:1];[self mouseDragged:drag];[self mouseUp:drag];
-  if(settings.p[i]==initial.p[i])pass=NO;
+  if(settings.p[i]==initial.p[i])pass=NO;else ++drags;
  }
- [self beginEdit:P_HMASS];editor.stringValue=@"7.25";[self commitEditor:nil];if(settings.p[P_HMASS]!=7.25)pass=NO;
- [self button:2];Settings saved=settings;[self button:1];[self button:3];if(memcmp(&saved,&settings,sizeof(saved)))pass=NO;
- [self beginEdit:P_HMASS];editor.stringValue=@"nan";[self commitEditor:nil];if(settings.p[P_HMASS]!=saved.p[P_HMASS])pass=NO;
- [self setParameter:P_STENSION value:500];[self button:0];if(fabs(display.fundamental-261.625565)>1e-5)pass=NO;
- mouseHeld=YES;[self syncGate];pthread_mutex_lock(&sound.lock);if(!sound.held||sound.serial<1)pass=NO;pthread_mutex_unlock(&sound.lock);[self releaseKeys];
- pthread_mutex_lock(&sound.lock);if(sound.held)pass=NO;pthread_mutex_unlock(&sound.lock);
+ [self beginEdit:P_HMASS];editor.stringValue=@"7.25";[self commitEditor:nil];BOOL exact=settings.p[P_HMASS]==7.25;pass &= exact;
+ [self button:2];Settings saved=settings;[self button:1];[self button:3];BOOL preset=memcmp(&saved,&settings,sizeof(saved))==0;pass &= preset;
+ [self beginEdit:P_HMASS];editor.stringValue=@"nan";[self commitEditor:nil];BOOL invalid=settings.p[P_HMASS]==saved.p[P_HMASS];pass &= invalid;
+ [self setParameter:P_STENSION value:500];[self button:0];BOOL tuning=fabs(display.fundamental-261.625565)<1e-5;pass &= tuning;
+ mouseHeld=YES;[self syncGate];pthread_mutex_lock(&sound.lock);BOOL gate=sound.held&&sound.serial>=1;pthread_mutex_unlock(&sound.lock);[self releaseKeys];
+ pthread_mutex_lock(&sound.lock);gate &= !sound.held;pass &= gate;pthread_mutex_unlock(&sound.lock);
  settings=initial;[self publish];selected=-1;[self display];
  NSBitmapImageRep *image=[self bitmapImageRepForCachingDisplayInRect:self.bounds];[self cacheDisplayInRect:self.bounds toBitmapImageRep:image];
  [[image representationUsingType:NSBitmapImageFileTypePNG properties:@{}]writeToFile:@"mac-ui-test.png" atomically:YES];
- NSDictionary *result=@{@"passed":@(pass),@"knob_drags":@42,@"exact_entry":@YES,@"preset_roundtrip":@YES,@"invalid_value_rejected":@YES,@"tune_c4":@YES,@"gate_release":@YES,@"audio_device_tested":@NO};
+ NSDictionary *result=@{@"passed":@(pass),@"knob_drags":@(drags),@"exact_entry":@(exact),@"preset_roundtrip":@(preset),@"invalid_value_rejected":@(invalid),@"tune_c4":@(tuning),@"gate_release":@(gate),@"audio_device_tested":@NO};
  [[NSJSONSerialization dataWithJSONObject:result options:NSJSONWritingPrettyPrinted error:nil]writeToFile:@"mac-ui-test.json" atomically:YES];
  return pass;
 }

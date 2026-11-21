@@ -40,6 +40,11 @@ int main(void){
  fprintf(f,"combined_settings_stress_cases=80\nmaximum_safety_limited_samples=%lu\n",maxLimited);
  default_settings(&s);if(!write_settings("validation-roundtrip.piano",&s))++fail;
  memset(&copy,0,sizeof(copy));if(!read_settings("validation-roundtrip.piano",&copy)||memcmp(&s,&copy,sizeof(s)))++fail;
+ {FILE *windows=fopen("validation-windows.piano","wb");
+  if(!windows)++fail;else {fprintf(windows,"PIANO_MATERIAL_LAB_1\r\n");for(i=0;i<PARAM_COUNT;++i)fprintf(windows,"%s %.17g\r\n",parameters[i].id,s.p[i]);fclose(windows);
+   if(!read_settings("validation-windows.piano",&copy)||memcmp(&s,&copy,sizeof(s)))++fail;}}
+ DeleteFileA("validation-windows.piano");
+ fprintf(f,"windows_crlf_preset_compatibility=checked\n");
  invalid=copy;{FILE *bad=fopen("validation-invalid.piano","w");if(bad){fprintf(bad,"PIANO_MATERIAL_LAB_1\nhammer_mass nan\n");fclose(bad);}}
  if(read_settings("validation-invalid.piano",&copy)||memcmp(&copy,&invalid,sizeof(copy)))++fail;
  DeleteFileA("validation-roundtrip.piano");DeleteFileA("validation-invalid.piano");

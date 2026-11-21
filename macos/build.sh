@@ -16,6 +16,6 @@ xcrun clang -O2 -Wno-unused-function -arch arm64 -arch x86_64 \
   -mmacosx-version-min=11.0 engine-validation.c -o build/engine-validation
 codesign --force --deep --sign - "$APP"
 codesign --verify --deep --strict "$APP"
-lipo -verify_arch arm64 x86_64 "$APP/Contents/MacOS/PianoMaterialLab"
+lipo "$APP/Contents/MacOS/PianoMaterialLab" -verify_arch arm64 x86_64
 ditto -c -k --sequesterRsrc --keepParent "$APP" build/Piano-Material-Lab-macOS-universal.zip
 echo "Built universal Mac app: $APP"
