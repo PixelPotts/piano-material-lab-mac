@@ -1,26 +1,64 @@
-MAC PORT VALIDATION
+MAC PORT VALIDATION — 2026-11-20 (America/Phoenix)
 
-Status: pending native CI build and interaction verification.
+Verified application source: a702ed9 (subsequent release changes are documentation).
+Native CI evidence on Apple Silicon and Intel:
+https://github.com/PixelPotts/piano-material-lab-mac/actions/runs/44875570575
+The release commit is rebuilt and rechecked by the same workflow.
 
-Scope: separate macOS application and repository; shared physical engine retained.
-Windows original remains unchanged. Historical Windows validation records in this
-repository do not establish macOS UI or hardware validation.
+VERIFIED
+- Native app: built with Apple's Clang/Cocoa/AudioToolbox on macOS 15 ARM64 and
+  macOS 15 Intel. Both jobs passed. lipo verifies arm64 and x86_64 in the executable;
+  codesign --verify --deep --strict verifies the ad-hoc signature. Bundle contains
+  Info.plist, executable and documentation; macOS deployment target is 11.0.
+- Real shared C engine: four 8-second, mono, 16-bit, 44,100 Hz PCM renders passed.
+  Default note/held peak: 0.486115; repeated-strike peak: 0.588684; silence: exactly
+  zero. FFT fundamental: 261.595 Hz versus C4 target 261.626 Hz. Sustain decays,
+  key release damps the sound, and repeated strikes produce new audible energy.
+- All 42 physical controls: 84 min/max endpoint renders remain finite, below .99
+  peak and nonzero. Every control changes the PCM signature from the reference.
+  Mirror-symmetric damper-position endpoints are allowed; both differ from default.
+- Stress and transitions: 80 combined settings cases, including all-min/all-max,
+  pass with no nonfinite output. Extreme combinations can engage the safety limiter
+  (largest count 14,110 samples in one case); this is not a claim of clean timbre at
+  all extremes. Transition render: zero nonfinite and zero overloaded samples.
+  All 42 crossfades preserve the first sample. One-sample versus 512-sample render
+  partitioning produces identical PCM.
+- Presets: exact numerical roundtrip; Windows CRLF compatibility; invalid/NaN
+  preset rejection without modifying current settings. Native Save/Reset/Load
+  actions restore settings, and invalid numeric entry leaves the prior value intact.
+- Native Cocoa interaction: all 42 knobs respond to synthesized mouse drag events;
+  exact entry applies 7.25 g; Tune C4 reaches 261.625565 Hz within 0.00001 Hz;
+  the gate registers a strike and releases. JSON report: passed=true on both hosts.
+  Tests use a temporary settings folder, leaving user presets untouched.
+- Visual: actual Cocoa screenshot inspected at 900 x 600. All 42 knobs, seven
+  physical groups, model readout, white key, monitor slider, six action buttons,
+  waveform region and footer are present. Screenshot: docs/mac-workbench.png.
+- Separation: Mac changes are in piano-material-lab-mac. The Windows original is
+  retained at commit 9442052dfe2b849e6067cd11405167dbd11f3135 in its own repository.
+  GitHub does not create a same-owner fork, so this separate repository preserves
+  the original Git history and records its source as the upstream remote.
+- Sharing: mmontag invited with write access to the Mac repository. Acceptance is
+  controlled by the recipient; an invitation is not confirmation of acceptance.
 
-Checks planned: universal Mach-O architectures, bundle structure and ad-hoc code
-signature; native execution on Intel and Apple Silicon; actual rendered PCM format,
-pitch, sustain, damper release, repeated strikes and silence; 84 endpoint renders
-for all 42 controls; 80 combined parameter stress cases; block partition invariance;
-parameter crossfade; preset persistence and rejection of invalid values; Cocoa knob
-drags, exact entry, preset actions, C4 tuning, key gate/release; rendered screenshot.
+PENDING / UNVERIFIED — PRACTICAL LIMITS
+- Physical Mac speaker/headphone output, Core Audio device callback behavior,
+  hardware latency/dropouts and perceptual realism. No physical Mac is attached
+  to this workspace; the native UI self-test does not start an audio device.
+- First launch through Gatekeeper and runtime on macOS 11–14 or versions after 15.
+  Deployment target 11.0 is a build compatibility setting, not execution testing on
+  every OS release. The save dialog and long-running user sessions were not manually
+  exercised on a physical Mac. Offline WAV generation itself is integration-tested.
+- Developer ID signing and notarization: unavailable without Apple's signing
+  credentials. Build is ad-hoc signed; first launch may require Open Anyway.
 
-Pending/unverified: sound from a physical Mac output device, subjective piano
-realism, device latency/dropouts, and first launch on every supported OS version.
-No physical Mac is attached to this workspace. CI UI tests do not open an audio device.
-Minimum deployment target is macOS 11; CI executes on macOS 15.
+MODEL ASSUMPTIONS / DEVIATIONS
+The shared reduced physical engine is retained, not acoustically recalibrated.
+Model limits are documented in MODEL.txt. Native Cocoa replaces Win32 controls;
+AudioToolbox replaces waveOut. Monitor volume starts at 50% each launch and is not
+saved as a physical preset; exported WAV uses the fixed offline monitor level.
+Personal settings live in ~/Library/Application Support/Piano Material Lab.
 
-Signing: ad-hoc, no Apple Developer ID certificate or notarization credentials.
-Gatekeeper first-launch approval may be required.
-
-Not applicable to this task — outside requested scope: machining, tooling,
-workholding, Mastercam files, setup views/sheets, NC posting, and Pivot archives.
-This application ZIP is not a Pivot delivery archive.
+NOT APPLICABLE — OUTSIDE REQUESTED SCOPE
+Machining, tooling, workholding, Mastercam files, setup datums/notes/views/sheets,
+NC posting and Pivot delivery archives. No such artifacts were modified. This
+application ZIP is not a Pivot archive and does not use Pivot's archive password.

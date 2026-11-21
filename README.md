@@ -5,6 +5,8 @@ live waveform, exact parameter entry, presets, and WAV export. All sound is
 synthesized from scratch. No piano samples, MIDI, Python, or other runtime installs
 are needed to play.
 
+![Native Mac workbench](docs/mac-workbench.png)
+
 This is a separate Mac port of [PixelPotts/piano-material-lab](https://github.com/PixelPotts/piano-material-lab),
 with its development history preserved. The original Windows app remains there.
 
