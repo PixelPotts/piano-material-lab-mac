@@ -1,0 +1,26 @@
+MAC PORT VALIDATION
+
+Status: pending native CI build and interaction verification.
+
+Scope: separate macOS application and repository; shared physical engine retained.
+Windows original remains unchanged. Historical Windows validation records in this
+repository do not establish macOS UI or hardware validation.
+
+Checks planned: universal Mach-O architectures, bundle structure and ad-hoc code
+signature; native execution on Intel and Apple Silicon; actual rendered PCM format,
+pitch, sustain, damper release, repeated strikes and silence; 84 endpoint renders
+for all 42 controls; 80 combined parameter stress cases; block partition invariance;
+parameter crossfade; preset persistence and rejection of invalid values; Cocoa knob
+drags, exact entry, preset actions, C4 tuning, key gate/release; rendered screenshot.
+
+Pending/unverified: sound from a physical Mac output device, subjective piano
+realism, device latency/dropouts, and first launch on every supported OS version.
+No physical Mac is attached to this workspace. CI UI tests do not open an audio device.
+Minimum deployment target is macOS 11; CI executes on macOS 15.
+
+Signing: ad-hoc, no Apple Developer ID certificate or notarization credentials.
+Gatekeeper first-launch approval may be required.
+
+Not applicable to this task — outside requested scope: machining, tooling,
+workholding, Mastercam files, setup views/sheets, NC posting, and Pivot archives.
+This application ZIP is not a Pivot delivery archive.

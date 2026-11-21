@@ -1,4 +1,10 @@
 /compiler/
+/build/
+*.app/
+*.dmg
+*.zip
+/mac-ui-test.png
+/mac-ui-test.json
 /backups/
 /validation/
 /audio-reviews/

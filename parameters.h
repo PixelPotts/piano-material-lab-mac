@@ -1,4 +1,5 @@
 /* SI calculations use explicit conversions from the units shown on the knobs. */
+#include "platform.h"
 #define PARAM_COUNT 42
 enum { P_HMASS,P_HVEL,P_HFELT,P_HEXP,P_HPOS,P_HWIDTH, P_SLEN,P_STENSION,P_SDIAM,P_SRHO,P_SE,P_SLOSS,
  P_DETL,P_DETR,P_BMASS,P_BK,P_BC,P_BWIDTH, P_PLEN,P_PWIDTH,P_PTHICK,P_PRHO,P_PE,P_PRATIO,
@@ -50,7 +51,7 @@ static const Parameter parameters[PARAM_COUNT]={
  {"mic_distance","Mic distance","m","Distance from the virtual radiator: propagation delay and geometric spreading change together.",.2,1.8,1,0},
  {"mic_angle","Mic polar angle","deg","Observation angle from the board normal. Uses an approximate finite-radiator directivity response.",0,80,20,0}
 };
-static const char *groupNames[7]={"01  HAMMER & FELT","02  STRINGS & MATERIAL","03  UNISON & BRIDGE","04  SOUNDBOARD WOOD","05  CASING & RESONANCE","06  DAMPER & P_PEDAL","07  ROOM & MICROPHONE"};
+static const char *groupNames[7]={"01  HAMMER & FELT","02  STRINGS & MATERIAL","03  UNISON & BRIDGE","04  SOUNDBOARD WOOD","05  CASING & RESONANCE","06  DAMPER & PEDAL","07  ROOM & MICROPHONE"};
 static double bounded(double x,double lo,double hi) { return x<lo?lo:(x>hi?hi:x); }
 static double string_tension_c4(const Settings *s) {
  double L=s->p[P_SLEN],d=s->p[P_SDIAM]*.001,A=PI*d*d/4,I=PI*d*d*d*d/64;
@@ -64,12 +65,18 @@ static int write_settings(const char *path,const Settings *s) {
  snprintf(temp,sizeof(temp),"%s.tmp",path); f=fopen(temp,"w"); if(!f)return 0;
  fprintf(f,"PIANO_MATERIAL_LAB_1\n"); for(i=0;i<PARAM_COUNT;++i)fprintf(f,"%s %.17g\n",parameters[i].id,s->p[i]);
  ok=fclose(f)==0; if(!ok)return 0;
+#ifdef _WIN32
  return MoveFileExA(temp,path,MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH)!=0;
+#else
+ return rename(temp,path)==0;
+#endif
 }
 static int read_settings(const char *path,Settings *s) {
  FILE *f=fopen(path,"r"); Settings candidate; char line[128],id[80],extra; double value; int i;
  if(!f)return 0;
- if(!fgets(line,sizeof(line),f)||strcmp(line,"PIANO_MATERIAL_LAB_1\n")){fclose(f);return 0;}
+ if(!fgets(line,sizeof(line),f)){fclose(f);return 0;}
+ line[strcspn(line,"\r\n")]=0;
+ if(strcmp(line,"PIANO_MATERIAL_LAB_1")){fclose(f);return 0;}
  for(i=0;i<PARAM_COUNT;++i) {
   if(!fgets(line,sizeof(line),f)||sscanf(line,"%79s %lf %c",id,&value,&extra)!=2||strcmp(id,parameters[i].id)||
      !(value>=parameters[i].min&&value<=parameters[i].max)){fclose(f);return 0;}

@@ -1,46 +1,50 @@
-name: Windows build and audio-model tests
+name: macOS universal app and physical-model tests
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Build native app
-        shell: cmd
-        run: build.bat
-      - name: Install test dependency
+      - name: Build and verify universal app
+        run: bash macos/build.sh
+      - name: Install numerical test dependency
         run: python -m pip install numpy
-      - name: Render notes and parameter sweeps
-        shell: pwsh
+      - name: Exercise real physical engine and presets
         run: |
-          $p = Start-Process .\piano.exe -ArgumentList '--test' -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw 'Note rendering failed' }
-          $p = Start-Process .\piano.exe -ArgumentList '--sweep' -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw 'Parameter sweep failed' }
+          ./build/engine-validation
+          ./build/synth-cli --test
+          ./build/synth-cli --sweep
           python verify-sound.py
-          if ($LASTEXITCODE -ne 0) { throw 'Sound verification failed' }
           python tools/verify-sweep.py
-          if ($LASTEXITCODE -ne 0) { throw 'Sweep verification failed' }
-      - name: Test physics, transitions and presets
-        shell: pwsh
+      - name: Exercise native Cocoa controls and capture the interface
         run: |
-          & .\compiler\zig-windows-x86_64-0.13.0\zig.exe cc -O2 engine-validation.c -o engine-validation.exe
-          if ($LASTEXITCODE -ne 0) { throw 'Test compilation failed' }
-          .\engine-validation.exe
-          if ($LASTEXITCODE -ne 0) { throw 'Engine tests failed' }
+          python - <<'PY'
+          import json, subprocess
+          subprocess.run(['build/Piano Material Lab.app/Contents/MacOS/PianoMaterialLab', '--self-test'], check=True, timeout=90)
+          with open('mac-ui-test.json') as f:
+              result = json.load(f)
+          assert result['passed'], result
+          print(json.dumps(result, indent=2))
+          PY
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: piano-material-lab-windows-x64
+          name: piano-material-lab-${{ matrix.runner }}
           path: |
-            piano.exe
-            README.txt
-            MODEL.txt
-            CONTROL-GUIDE.txt
+            build/Piano-Material-Lab-macOS-universal.zip
+            mac-ui-test.png
+            mac-ui-test.json
             sound-validation.txt
-            control-sweep.csv
             engine-validation.txt
+            control-sweep.csv
+            transition-test.txt
