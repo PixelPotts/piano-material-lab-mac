@@ -137,7 +137,7 @@ static NSString *parameterValue(int i,double value){double span=parameters[i].ma
   for(int segment=0;segment<36;segment++){double a=(135+270*segment/36.0)*PI/180,b=(135+270*(segment+1)/36.0)*PI/180;drawLine(NSMakePoint(c.x+32*cos(a),c.y+32*sin(a)),NSMakePoint(c.x+32*cos(b),c.y+32*sin(b)),segment/36.0<=t?accent(i/6):rgb(49,54,61),3);}
   NSBezierPath *circle=[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(c.x-25,c.y-25,50,50)];[rgb(38,42,49)setFill];[circle fill];[(i==selected?accent(i/6):rgb(73,78,88))setStroke];circle.lineWidth=1;[circle stroke];
   drawLine(NSMakePoint(c.x+11*cos(angle),c.y+11*sin(angle)),NSMakePoint(c.x+22*cos(angle),c.y+22*sin(angle)),accent(i/6),3);
-  text(@(parameters[i].unit),NSMakeRect(c.x-54,c.y-57,108,17),11,rgb(135,144,158),YES,NO);
+  text(@(parameters[i].unit),NSMakeRect(c.x-54,c.y-50,108,17),11,rgb(135,144,158),YES,NO);
   text(@(parameters[i].name),NSMakeRect(c.x-55,c.y+39,110,19),13,rgb(214,218,225),YES,NO);
   text(parameterValue(i,settings.p[i]),NSMakeRect(c.x-54,c.y+59,108,20),14,accent(i/6),YES,YES);
  }
@@ -154,14 +154,14 @@ static NSString *parameterValue(int i,double value){double span=parameters[i].ma
  NSBezierPath *wave=[NSBezierPath bezierPath];wave.lineWidth=1;for(int i=0;i<BLOCK;i++){NSPoint p=NSMakePoint(190+i*858.0/(BLOCK-1),815-samples[i]/32768.0*45);if(i)[wave lineToPoint:p];else[wave moveToPoint:p];}[rgb(146,191,170)setStroke];[wave stroke];
  text(@"MONITOR LEVEL (NOT INSTRUMENT PHYSICS)",NSMakeRect(1098,744,310,24),11,rgb(155,168,184),NO,NO);fillRect(NSMakeRect(1100,790,300,5),rgb(46,55,67));fillRect(NSMakeRect(1100,790,300*volume/1.5,5),rgb(190,204,216));fillRect(NSMakeRect(1095+300*volume/1.5,780,10,25),rgb(220,224,229));
  text([NSString stringWithFormat:@"%.1f dB   Peak %.1f dBFS",volume>0?20*log10(volume):-96,peak>0?20*log10(peak):-96],NSMakeRect(1098,819,310,22),14,rgb(189,201,214),NO,YES);
- text(atomic_load(&audioError)?@"Audio unavailable - check output device":[NSString stringWithFormat:@"Core Audio   Ceiling: %lu   %@",clips,faults?@"FAULT":@"READY"],NSMakeRect(1098,849,310,22),12,rgb(139,173,153),NO,NO);
+ text(testMode?@"Self-test / audio device off":atomic_load(&audioError)?@"Audio unavailable - check output device":[NSString stringWithFormat:@"Core Audio   Ceiling: %lu   %@",clips,faults?@"FAULT":@"READY"],NSMakeRect(1098,849,310,22),12,rgb(139,173,153),NO,NO);
  drawLine(NSMakePoint(24,898),NSMakePoint(1416,898),rgb(49,56,66),1);
  NSString *help=selected>=0?[NSString stringWithFormat:@"%s | %s",parameters[selected].name,parameters[selected].help]:info;
  text(help,NSMakeRect(24,910,1392,40),14,rgb(184,196,210),NO,NO);[NSGraphicsContext restoreGraphicsState];
 }
 - (void)beginEdit:(int)index{
- if(editor)[self commitEditor:nil];selected=editing=index;NSPoint c=knobPoint(index);CGFloat s=[self canvasScale];
- editor=[[NSTextField alloc]initWithFrame:NSMakeRect((c.x-53)*s,(c.y+56)*s,106*s,25*s)];editor.stringValue=[NSString stringWithFormat:@"%.12g",settings.p[index]];editor.font=[NSFont monospacedSystemFontOfSize:14*s weight:NSFontWeightRegular];editor.alignment=NSTextAlignmentCenter;editor.delegate=self;editor.target=self;editor.action=@selector(commitEditor:);[self addSubview:editor];[self.window makeFirstResponder:editor];[editor selectText:nil];
+ if(editor)[self commitEditor:nil];[self releaseKeys];selected=editing=index;NSPoint c=knobPoint(index);CGFloat s=[self canvasScale];
+ editor=[[NSTextField alloc]initWithFrame:NSMakeRect((c.x-53)*s,(c.y+56)*s,106*s,25*s)];editor.stringValue=[NSString stringWithFormat:@"%.12g",settings.p[index]];editor.font=[NSFont monospacedSystemFontOfSize:14*s weight:NSFontWeightRegular];editor.alignment=NSTextAlignmentCenter;editor.delegate=self;editor.target=self;editor.action=@selector(commitEditor:);[self addSubview:editor];[editor selectText:nil];
 }
 - (void)commitEditor:(id)sender{
  if(!editor)return;NSString *value=editor.stringValue;int index=editing;NSTextField *old=editor;editor=nil;editing=-1;
@@ -219,7 +219,7 @@ static NSString *parameterValue(int i,double value){double span=parameters[i].ma
   NSEvent *drag=[NSEvent mouseEventWithType:NSEventTypeLeftMouseDragged location:screen modifierFlags:0 timestamp:0 windowNumber:self.window.windowNumber context:nil eventNumber:2 clickCount:1 pressure:1];[self mouseDragged:drag];[self mouseUp:drag];
   if(settings.p[i]==initial.p[i])pass=NO;else ++drags;
  }
- [self beginEdit:P_HMASS];editor.stringValue=@"7.25";[self commitEditor:nil];BOOL exact=settings.p[P_HMASS]==7.25;pass &= exact;
+ [self beginEdit:P_HMASS];fprintf(stderr,"Exact editor exists=%d before=%s\n",editor!=nil,editor.stringValue.UTF8String);editor.stringValue=@"7.25";fprintf(stderr,"Exact editor input=%s\n",editor.stringValue.UTF8String);[self commitEditor:nil];fprintf(stderr,"Exact applied=%.17g\n",settings.p[P_HMASS]);BOOL exact=settings.p[P_HMASS]==7.25;pass &= exact;
  [self button:2];Settings saved=settings;[self button:1];[self button:3];BOOL preset=memcmp(&saved,&settings,sizeof(saved))==0;pass &= preset;
  [self beginEdit:P_HMASS];editor.stringValue=@"nan";[self commitEditor:nil];BOOL invalid=settings.p[P_HMASS]==saved.p[P_HMASS];pass &= invalid;
  [self setParameter:P_STENSION value:500];[self button:0];BOOL tuning=fabs(display.fundamental-261.625565)<1e-5;pass &= tuning;
